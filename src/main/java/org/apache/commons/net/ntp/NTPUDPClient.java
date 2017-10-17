@@ -44,6 +44,22 @@ public final class NTPUDPClient extends DatagramSocketClient
     public static final int DEFAULT_PORT = 123;
 
     private int _version = NtpV3Packet.VERSION_3;
+    
+    private ClientTimeSource timeSource;
+    
+    /**
+     * Initialises {@link NTPUDPClient} with an external time source.
+     * @param timeSource Override where we get the system time from
+     */
+    public NTPUDPClient( ClientTimeSource timeSource )
+    {
+        this.timeSource = timeSource;
+    }
+    
+    public NTPUDPClient()
+    {
+        this( new SystemTimeSource() );
+    }
 
     /***
      * Retrieves the time information from the specified server and port and
@@ -81,7 +97,7 @@ public final class NTPUDPClient extends DatagramSocketClient
          * introduces an error in the delay time.
          * No extraneous logging and initializations here !!!
          */
-        TimeStamp now = TimeStamp.getCurrentTime();
+        TimeStamp now = TimeStamp.getNtpTime( timeSource.currentTimeMillis() );
 
         // Note that if you do not set the transmit time field then originating time
         // in server response is all 0's which is "Thu Feb 07 01:28:16 EST 2036".
@@ -90,7 +106,7 @@ public final class NTPUDPClient extends DatagramSocketClient
         _socket_.send(sendPacket);
         _socket_.receive(receivePacket);
 
-        long returnTime = System.currentTimeMillis();
+        long returnTime = timeSource.currentTimeMillis();
         // create TimeInfo message container but don't pre-compute the details yet
         TimeInfo info = new TimeInfo(recMessage, returnTime, false);
 
